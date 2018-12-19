@@ -30,6 +30,7 @@
 #include "UT_FixedVector.h"
 #include "VM_SIMD.h"
 #include "SYS_Types.h"
+#include <igl/parallel_for.h>
 #include <type_traits>
 #include <utility>
 
@@ -152,16 +153,14 @@ void UT_SolidAngle<T,S>::init(
     }
     else
     {
-        UTparallelFor(UT_BlockedRange<int>(0,ntriangles), [triangle_points,&triangle_boxes,positions](const UT_BlockedRange<int> &r)
+      igl::parallel_for(ntriangles,
+        [triangle_points,&triangle_boxes,positions](int i)
         {
-            const int *cur_triangle_points = triangle_points + exint(r.begin())*3;
-            for (int i = r.begin(), end = r.end(); i < end; ++i, cur_triangle_points += 3)
-            {
-                UT::Box<S,3> &box = triangle_boxes[i];
-                box.initBounds(positions[cur_triangle_points[0]]);
-                box.enlargeBounds(positions[cur_triangle_points[1]]);
-                box.enlargeBounds(positions[cur_triangle_points[2]]);
-            }
+          const int *cur_triangle_points = triangle_points + i*3;
+          UT::Box<S,3> &box = triangle_boxes[i];
+          box.initBounds(positions[cur_triangle_points[0]]);
+          box.enlargeBounds(positions[cur_triangle_points[1]]);
+          box.enlargeBounds(positions[cur_triangle_points[2]]);
         });
     }
 #if SOLID_ANGLE_TIME_PRECOMPUTE
@@ -951,15 +950,13 @@ void UT_SubtendedAngle<T,S>::init(
     }
     else
     {
-        UTparallelFor(UT_BlockedRange<int>(0,nsegments), [segment_points,&segment_boxes,positions](const UT_BlockedRange<int> &r)
+      igl::parallel_for(nsegments,
+        [segment_points,&segment_boxes,positions](int i)
         {
-            const int *cur_segment_points = segment_points + exint(r.begin())*2;
-            for (int i = r.begin(), end = r.end(); i < end; ++i, cur_segment_points += 2)
-            {
-                UT::Box<S,2> &box = segment_boxes[i];
-                box.initBounds(positions[cur_segment_points[0]]);
-                box.enlargeBounds(positions[cur_segment_points[1]]);
-            }
+          const int *cur_segment_points = segment_points + i*2;
+          UT::Box<S,2> &box = segment_boxes[i];
+          box.initBounds(positions[cur_segment_points[0]]);
+          box.enlargeBounds(positions[cur_segment_points[1]]);
         });
     }
 #if SOLID_ANGLE_TIME_PRECOMPUTE
