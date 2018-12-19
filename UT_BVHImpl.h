@@ -488,7 +488,7 @@ void BVH<N>::computeFullBoundingBox(Box<T,NAXES>& axes_minmax, const BOX_TYPE* b
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, const INT_TYPE nboxes, const bool force_serial) noexcept {
+void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, const INT_TYPE nboxes) noexcept {
     if (nboxes <= N) {
         // Fits in one node
         for (INT_TYPE i = 0; i < nboxes; ++i) {
@@ -531,7 +531,7 @@ void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axe
     //       to determine the number of nodes in the subtree.
 
     // Recurse
-    if (nparallel >= 2 && !force_serial) {
+    if (nparallel >= 2) {
         UT_SmallArray<UT_Array<Node>> parallel_nodes;
         UT_SmallArray<Node> parallel_parent_nodes;
         parallel_nodes.setSize(nparallel);
@@ -565,7 +565,7 @@ void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axe
             Node& parent_node = parallel_parent_nodes[taski];
 
             // We'll have to fix the internal node numbers in parent_node and local_nodes later
-            initNode<H>(local_nodes, parent_node, sub_boxes[childi], boxes, sub_indices[childi], sub_nboxes, true);
+            initNode<H>(local_nodes, parent_node, sub_boxes[childi], boxes, sub_indices[childi], sub_nboxes);
           });
 
         INT_TYPE counted_parallel = 0;
@@ -597,7 +597,7 @@ void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axe
                 else {
                     nodes.bumpCapacity(local_nodes_start + 1);
                     nodes.setSizeNoInit(local_nodes_start + 1);
-                    initNode<H>(nodes, nodes[local_nodes_start], sub_boxes[i], boxes, sub_indices[i], sub_nboxes, true);
+                    initNode<H>(nodes, nodes[local_nodes_start], sub_boxes[i], boxes, sub_indices[i], sub_nboxes);
                 }
             }
         }
@@ -613,7 +613,7 @@ void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axe
                 node.child[i] = Node::markInternal(local_nodes_start);
                 nodes.bumpCapacity(local_nodes_start + 1);
                 nodes.setSizeNoInit(local_nodes_start + 1);
-                initNode<H>(nodes, nodes[local_nodes_start], sub_boxes[i], boxes, sub_indices[i], sub_nboxes, true);
+                initNode<H>(nodes, nodes[local_nodes_start], sub_boxes[i], boxes, sub_indices[i], sub_nboxes);
             }
         }
     }
