@@ -37,6 +37,10 @@
 #include "UT_ParallelUtil.h"
 #include "UT_SmallArray.h"
 #include "SYS_Types.h"
+
+#include <igl/parallel_for.h>
+
+#include <iostream>
 #include <algorithm>
 
 namespace HDK_Sample {
@@ -106,12 +110,12 @@ INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices,
 {
     constexpr INT_TYPE PARALLEL_THRESHOLD = 65536;
     INT_TYPE ntasks = 1;
-    if (nboxes >= PARALLEL_THRESHOLD) 
-    {
-        INT_TYPE nprocessors = UT_Thread::getNumProcessors();
-        ntasks = (nprocessors > 1) ? SYSmin(4*nprocessors, nboxes/(PARALLEL_THRESHOLD/2)) : 1;
-    }
-    if (ntasks == 1) 
+    //if (nboxes >= PARALLEL_THRESHOLD) 
+    //{
+    //    INT_TYPE nprocessors = UT_Thread::getNumProcessors();
+    //    ntasks = (nprocessors > 1) ? SYSmin(4*nprocessors, nboxes/(PARALLEL_THRESHOLD/2)) : 1;
+    //}
+    //if (ntasks == 1) 
     {
         // Serial: easy case; just loop through.
 
@@ -143,80 +147,6 @@ INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices,
         return indices_end - nan_start;
     }
 
-    // Parallel: hard case.
-    // 1) Collapse each of ntasks chunks and count number of items to exclude
-    // 2) Accumulate number of items to exclude.
-    // 3) If none, return.
-    // 4) Copy non-NaN chunks
-
-    UT_SmallArray<INT_TYPE> nexcluded;
-    nexcluded.setSizeNoInit(ntasks);
-    UTparallelFor(UT_BlockedRange<INT_TYPE>(0,ntasks), [boxes,indices,ntasks,nboxes,&nexcluded](const UT_BlockedRange<INT_TYPE>& r) 
-    {
-        for (INT_TYPE taski = r.begin(), task_end = r.end(); taski < task_end; ++taski)
-        {
-            SRC_INT_TYPE* indices_start = indices + (taski*exint(nboxes))/ntasks;
-            const SRC_INT_TYPE* indices_end = indices + ((taski+1)*exint(nboxes))/ntasks;
-            SRC_INT_TYPE* psrc_index = indices_start;
-            for (; psrc_index != indices_end; ++psrc_index)
-            {
-                const bool exclude = utBoxExclude(boxes[*psrc_index]);
-                if (exclude)
-                    break;
-            }
-            if (psrc_index == indices_end) 
-	    {
-                nexcluded[taski] = 0;
-                continue;
-            }
-
-            // First NaN or infinite box
-            SRC_INT_TYPE* nan_start = psrc_index;
-            for (++psrc_index; psrc_index != indices_end; ++psrc_index) 
-	    {
-                const bool exclude = utBoxExclude(boxes[*psrc_index]);
-                if (!exclude) 
-		{
-                    *nan_start = *psrc_index;
-                    ++nan_start;
-                }
-            }
-            nexcluded[taski] = indices_end - nan_start;
-        }
-    }, 0, 1);
-
-    // Accumulate
-    INT_TYPE total_excluded = nexcluded[0];
-    for (INT_TYPE taski = 1; taski < ntasks; ++taski) 
-    {
-        total_excluded += nexcluded[taski];
-    }
-
-    if (total_excluded == 0)
-        return 0;
-
-    // TODO: Parallelize this part, if it's a bottleneck and we care about cases with NaNs or infinities.
-
-    INT_TYPE taski = 0;
-    while (nexcluded[taski] == 0) 
-    {
-        ++taski;
-    }
-
-    SRC_INT_TYPE* dest_indices = indices + ((taski+1)*exint(nboxes))/ntasks - nexcluded[taski];
-
-    SRC_INT_TYPE* dest_end = indices + nboxes - total_excluded;
-    for (++taski; taski < ntasks && dest_indices < dest_end; ++taski)
-    {
-        const SRC_INT_TYPE* psrc_index = indices + (taski*exint(nboxes))/ntasks;
-        const SRC_INT_TYPE* psrc_end = indices + ((taski+1)*exint(nboxes))/ntasks - nexcluded[taski];
-        INT_TYPE count = psrc_end - psrc_index;
-	// Note should be memmove as it is overlapping.
-	memmove(dest_indices, psrc_index, sizeof(SRC_INT_TYPE)*count);
-        dest_indices += count;
-    }
-    nboxes -= total_excluded;
-    return total_excluded;
 }
 
 template<uint N>
@@ -489,31 +419,11 @@ void BVH<N>::traverseVectorHelper(
     functors.post(nodei, parent_nodei, data_for_parent, s, local_data, descend);
 }
 
+
 template<uint N>
 template<typename SRC_INT_TYPE>
 void BVH<N>::createTrivialIndices(SRC_INT_TYPE* indices, const INT_TYPE n) noexcept {
-    constexpr INT_TYPE PARALLEL_THRESHOLD = 65536;
-    INT_TYPE ntasks = 1;
-    if (n >= PARALLEL_THRESHOLD) {
-        INT_TYPE nprocessors = UT_Thread::getNumProcessors();
-        ntasks = (nprocessors > 1) ? SYSmin(4*nprocessors, n/(PARALLEL_THRESHOLD/2)) : 1;
-    }
-    if (ntasks == 1) {
-        for (INT_TYPE i = 0; i < n; ++i) {
-            indices[i] = i;
-        }
-    }
-    else {
-        UTparallelFor(UT_BlockedRange<INT_TYPE>(0,ntasks), [indices,ntasks,n](const UT_BlockedRange<INT_TYPE>& r) {
-            for (INT_TYPE taski = r.begin(), taskend = r.end(); taski != taskend; ++taski) {
-                INT_TYPE start = (taski * exint(n))/ntasks;
-                INT_TYPE end = ((taski+1) * exint(n))/ntasks;
-                for (INT_TYPE i = start; i != end; ++i) {
-                    indices[i] = i;
-                }
-            }
-        }, 0, 1);
-    }
+    igl::parallel_for(n, [indices,n](INT_TYPE i) { indices[i] = i; }, 65536);
 }
 
 template<uint N>
@@ -545,35 +455,31 @@ void BVH<N>::computeFullBoundingBox(Box<T,NAXES>& axes_minmax, const BOX_TYPE* b
         axes_minmax = box;
     }
     else {
-        // Combine boxes in parallel, into just a few boxes
         UT_SmallArray<Box<T,NAXES>> parallel_boxes;
-        parallel_boxes.setSize(ntasks);
-        UTparallelFor(UT_BlockedRange<INT_TYPE>(0,ntasks), [&parallel_boxes,ntasks,boxes,nboxes,indices](const UT_BlockedRange<INT_TYPE>& r) {
-            for (INT_TYPE taski = r.begin(), end = r.end(); taski < end; ++taski) {
-                const INT_TYPE startbox = (taski*uint64(nboxes))/ntasks;
-                const INT_TYPE endbox = ((taski+1)*uint64(nboxes))/ntasks;
-                Box<T,NAXES> box;
-                if (indices) {
-                    box.initBounds(boxes[indices[startbox]]);
-                    for (INT_TYPE i = startbox+1; i < endbox; ++i) {
-                        box.combine(boxes[indices[i]]);
-                    }
-                }
-                else {
-                    box.initBounds(boxes[startbox]);
-                    for (INT_TYPE i = startbox+1; i < endbox; ++i) {
-                        box.combine(boxes[i]);
-                    }
-                }
-                parallel_boxes[taski] = box;
+        Box<T,NAXES> box;
+        igl::parallel_for(
+          nboxes,
+          [&parallel_boxes](int n){parallel_boxes.setSize(n);},
+          [&parallel_boxes,indices,&boxes](int i, int t)
+          {
+            if(indices)
+            {
+              parallel_boxes[t].combine(boxes[indices[i]]);
+            }else
+            {
+              parallel_boxes[t].combine(boxes[i]);
             }
-        }, 0, 1);
-
-        // Combine parallel_boxes
-        Box<T,NAXES> box = parallel_boxes[0];
-        for (INT_TYPE i = 1; i < ntasks; ++i) {
-            box.combine(parallel_boxes[i]);
-        }
+          },
+          [&parallel_boxes,&box](int t)
+          {
+            if(t == 0)
+            {
+              box = parallel_boxes[0];
+            }else
+            {
+              box.combine(parallel_boxes[t]);
+            }
+          });
 
         axes_minmax = box;
     }
@@ -1282,55 +1188,41 @@ void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_I
         }
     }
     else {
-        // Combine boxes in parallel, into just a few boxes
         UT_SmallArray<Box<T,NAXES>> parallel_boxes;
-        parallel_boxes.setSize(NSPANS*ntasks);
         UT_SmallArray<INT_TYPE> parallel_counts;
-        parallel_counts.setSize(NSPANS*ntasks);
-        UTparallelFor(UT_BlockedRange<INT_TYPE>(0,ntasks), [&parallel_boxes,&parallel_counts,ntasks,boxes,nboxes,indices,axis,axis_min_x2,axis_index_scale](const UT_BlockedRange<INT_TYPE>& r) {
-            for (INT_TYPE taski = r.begin(), end = r.end(); taski < end; ++taski) {
-                Box<T,NAXES> span_boxes[NSPANS];
-                for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                    span_boxes[i].initBounds();
-                }
-                INT_TYPE span_counts[NSPANS];
-                for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                    span_counts[i] = 0;
-                }
-                const INT_TYPE startbox = (taski*uint64(nboxes))/ntasks;
-                const INT_TYPE endbox = ((taski+1)*uint64(nboxes))/ntasks;
-                for (INT_TYPE indexi = startbox; indexi != endbox; ++indexi) {
-                    const auto& box = boxes[indices[indexi]];
-                    const T sum = utBoxCenter(box, axis);
-                    const uint span_index = SYSclamp(int((sum-axis_min_x2)*axis_index_scale), int(0), int(NSPANS-1));
-                    ++span_counts[span_index];
-                    Box<T,NAXES>& span_box = span_boxes[span_index];
-                    span_box.combine(box);
-                }
-                // Copy the results out
-                const INT_TYPE dest_array_start = taski*NSPANS;
-                for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                    parallel_boxes[dest_array_start+i] = span_boxes[i];
-                }
-                for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                    parallel_counts[dest_array_start+i] = span_counts[i];
-                }
+        igl::parallel_for(
+          nboxes,
+          [&parallel_boxes,&parallel_counts](int n)
+          {
+            parallel_boxes.setSize( NSPANS*n);
+            parallel_counts.setSize(NSPANS*n);
+            for(int t = 0;t<n;t++)
+            {
+              for (INT_TYPE i = 0; i < NSPANS; ++i) 
+              {
+                parallel_boxes[t*NSPANS+i].initBounds();
+                parallel_counts[t*NSPANS+i] = 0;
+              }
             }
-        }, 0, 1);
+          },
+          [&parallel_boxes,&parallel_counts,&boxes,indices,axis,axis_min_x2,axis_index_scale](int j, int t)
+          {
+            const auto& box = boxes[indices[j]];
+            const T sum = utBoxCenter(box, axis);
+            const uint span_index = SYSclamp(int((sum-axis_min_x2)*axis_index_scale), int(0), int(NSPANS-1));
+            ++parallel_counts[t*NSPANS+span_index];
+            Box<T,NAXES>& span_box = parallel_boxes[t*NSPANS+span_index];
+            span_box.combine(box);
+          },
+          [&parallel_boxes,&parallel_counts,&span_boxes,&span_counts](int t)
+          {
+            for(int i = 0;i<NSPANS;i++)
+            {
+              span_counts[i] += parallel_counts[t*NSPANS + i];
+              span_boxes[i].combine(parallel_boxes[t*NSPANS + i]);
+            }
+          });
 
-        // Combine the partial results
-        for (INT_TYPE taski = 0; taski < ntasks; ++taski) {
-            const INT_TYPE dest_array_start = taski*NSPANS;
-            for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                span_boxes[i].combine(parallel_boxes[dest_array_start+i]);
-            }
-        }
-        for (INT_TYPE taski = 0; taski < ntasks; ++taski) {
-            const INT_TYPE dest_array_start = taski*NSPANS;
-            for (INT_TYPE i = 0; i < NSPANS; ++i) {
-                span_counts[i] += parallel_counts[dest_array_start+i];
-            }
-        }
     }
 
     // Spans 0 to NSPANS-2
