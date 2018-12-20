@@ -1,5 +1,7 @@
 # Fast Winding Numbers for Soups
 
+https://github.com/alecjacobson/WindingNumber
+
 Implementation of the _ACM SIGGRAPH_ 2018 paper, 
 
 "Fast Winding Numbers for Soups and Clouds" 
@@ -24,4 +26,4 @@ An example of very similar code and how to use it to create a geometry operator 
 
 Create a single header using:
 
-    echo "// This header created by issuing: \`$BASH_COMMAND\` $(echo "" | cat - LICENSE README.md | sed -e "s#^..*#\/\/&#") $(echo "" | cat - SYS_Types.h SYS_Math.h VM_SSEFunc.h VM_SIMD.h UT_Array.h UT_ArrayImpl.h UT_SmallArray.h UT_FixedVector.h UT_ParallelUtil.h UT_BVH.h UT_BVHImpl.h UT_SolidAngle.h UT_Array.cpp UT_SolidAngle.cpp | sed -e "s/^#.*include  *\".*$//g")"
+    echo "// This header created by issuing: \`$BASH_COMMAND\` $(echo "" | cat - LICENSE README.md | sed -e "s#^..*#\/\/ &#") $(echo "" | cat - SYS_Types.h SYS_Math.h VM_SSEFunc.h VM_SIMD.h UT_Array.h UT_ArrayImpl.h UT_SmallArray.h UT_FixedVector.h UT_ParallelUtil.h UT_BVH.h UT_BVHImpl.h UT_SolidAngle.h UT_Array.cpp UT_SolidAngle.cpp | sed -e "s/^#.*include  *\".*$//g")"
