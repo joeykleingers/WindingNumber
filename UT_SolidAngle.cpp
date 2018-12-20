@@ -47,6 +47,8 @@
 
 #define TAYLOR_SERIES_ORDER 2
 
+namespace igl { namespace FastWindingNumber {
+
 namespace HDK_Sample {
 
 template<typename T,typename S>
@@ -96,7 +98,7 @@ struct UT_SolidAngle<T,S>::BoxData
 };
 
 template<typename T,typename S>
-UT_SolidAngle<T,S>::UT_SolidAngle()
+inline UT_SolidAngle<T,S>::UT_SolidAngle()
     : myTree()
     , myNBoxes(0)
     , myOrder(2)
@@ -108,7 +110,7 @@ UT_SolidAngle<T,S>::UT_SolidAngle()
 {}
 
 template<typename T,typename S>
-UT_SolidAngle<T,S>::~UT_SolidAngle()
+inline UT_SolidAngle<T,S>::~UT_SolidAngle()
 {
     // Default destruction works, but this needs to be outlined
     // to avoid having to include UT_BVHImpl.h in the header,
@@ -116,7 +118,7 @@ UT_SolidAngle<T,S>::~UT_SolidAngle()
 }
 
 template<typename T,typename S>
-void UT_SolidAngle<T,S>::init(
+inline void UT_SolidAngle<T,S>::init(
     const int ntriangles,
     const int *const triangle_points,
     const int npoints,
@@ -708,7 +710,7 @@ void UT_SolidAngle<T,S>::init(
 }
 
 template<typename T,typename S>
-void UT_SolidAngle<T, S>::clear()
+inline void UT_SolidAngle<T, S>::clear()
 {
     myTree.clear();
     myNBoxes = 0;
@@ -721,7 +723,7 @@ void UT_SolidAngle<T, S>::clear()
 }
 
 template<typename T,typename S>
-T UT_SolidAngle<T, S>::computeSolidAngle(const UT_Vector3T<T> &query_point, const T accuracy_scale) const
+inline T UT_SolidAngle<T, S>::computeSolidAngle(const UT_Vector3T<T> &query_point, const T accuracy_scale) const
 {
     const T accuracy_scale2 = accuracy_scale*accuracy_scale;
 
@@ -894,7 +896,7 @@ struct UT_SubtendedAngle<T,S>::BoxData
 };
 
 template<typename T,typename S>
-UT_SubtendedAngle<T,S>::UT_SubtendedAngle()
+inline UT_SubtendedAngle<T,S>::UT_SubtendedAngle()
     : myTree()
     , myNBoxes(0)
     , myOrder(2)
@@ -906,7 +908,7 @@ UT_SubtendedAngle<T,S>::UT_SubtendedAngle()
 {}
 
 template<typename T,typename S>
-UT_SubtendedAngle<T,S>::~UT_SubtendedAngle()
+inline UT_SubtendedAngle<T,S>::~UT_SubtendedAngle()
 {
     // Default destruction works, but this needs to be outlined
     // to avoid having to include UT_BVHImpl.h in the header,
@@ -914,7 +916,7 @@ UT_SubtendedAngle<T,S>::~UT_SubtendedAngle()
 }
 
 template<typename T,typename S>
-void UT_SubtendedAngle<T,S>::init(
+inline void UT_SubtendedAngle<T,S>::init(
     const int nsegments,
     const int *const segment_points,
     const int npoints,
@@ -1259,7 +1261,7 @@ void UT_SubtendedAngle<T,S>::init(
 }
 
 template<typename T,typename S>
-void UT_SubtendedAngle<T, S>::clear()
+inline void UT_SubtendedAngle<T, S>::clear()
 {
     myTree.clear();
     myNBoxes = 0;
@@ -1272,7 +1274,7 @@ void UT_SubtendedAngle<T, S>::clear()
 }
 
 template<typename T,typename S>
-T UT_SubtendedAngle<T, S>::computeAngle(const UT_Vector2T<T> &query_point, const T accuracy_scale) const
+inline T UT_SubtendedAngle<T, S>::computeAngle(const UT_Vector2T<T> &query_point, const T accuracy_scale) const
 {
     const T accuracy_scale2 = accuracy_scale*accuracy_scale;
 
@@ -1399,12 +1401,13 @@ T UT_SubtendedAngle<T, S>::computeAngle(const UT_Vector2T<T> &query_point, const
 }
 
 // Instantiate our templates.
-template class UT_SolidAngle<fpreal32,fpreal32>;
+//template class UT_SolidAngle<fpreal32,fpreal32>;
 // FIXME: The SIMD parts will need to be handled differently in order to support fpreal64.
 //template class UT_SolidAngle<fpreal64,fpreal32>;
 //template class UT_SolidAngle<fpreal64,fpreal64>;
-template class UT_SubtendedAngle<fpreal32,fpreal32>;
+//template class UT_SubtendedAngle<fpreal32,fpreal32>;
 //template class UT_SubtendedAngle<fpreal64,fpreal32>;
 //template class UT_SubtendedAngle<fpreal64,fpreal64>;
 
 } // End HDK_Sample namespace
+}}

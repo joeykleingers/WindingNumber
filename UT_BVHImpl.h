@@ -43,6 +43,7 @@
 #include <iostream>
 #include <algorithm>
 
+namespace igl { namespace FastWindingNumber {
 namespace HDK_Sample {
 
 namespace UT {
@@ -106,7 +107,7 @@ struct ut_BoxCentre<UT_FixedVector<T,NAXES,INSTANTIATED>> {
 };
 
 template<typename BOX_TYPE,typename SRC_INT_TYPE,typename INT_TYPE>
-INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE& nboxes) noexcept 
+inline INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE& nboxes) noexcept 
 {
     constexpr INT_TYPE PARALLEL_THRESHOLD = 65536;
     INT_TYPE ntasks = 1;
@@ -124,7 +125,7 @@ INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices,
         // Loop through forward once
         SRC_INT_TYPE* psrc_index = indices;
         for (; psrc_index != indices_end; ++psrc_index) 
-	{
+        {
             const bool exclude = utBoxExclude(boxes[*psrc_index]);
             if (exclude)
                 break;
@@ -151,7 +152,7 @@ INT_TYPE utExcludeNaNInfBoxIndices(const BOX_TYPE* boxes, SRC_INT_TYPE* indices,
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::init(const BOX_TYPE* boxes, const INT_TYPE nboxes, SRC_INT_TYPE* indices, bool reorder_indices, INT_TYPE max_items_per_leaf) noexcept {
+inline void BVH<N>::init(const BOX_TYPE* boxes, const INT_TYPE nboxes, SRC_INT_TYPE* indices, bool reorder_indices, INT_TYPE max_items_per_leaf) noexcept {
     Box<T,NAXES> axes_minmax;
     computeFullBoundingBox(axes_minmax, boxes, nboxes, indices);
 
@@ -160,7 +161,7 @@ void BVH<N>::init(const BOX_TYPE* boxes, const INT_TYPE nboxes, SRC_INT_TYPE* in
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::init(Box<T,NAXES> axes_minmax, const BOX_TYPE* boxes, INT_TYPE nboxes, SRC_INT_TYPE* indices, bool reorder_indices, INT_TYPE max_items_per_leaf) noexcept {
+inline void BVH<N>::init(Box<T,NAXES> axes_minmax, const BOX_TYPE* boxes, INT_TYPE nboxes, SRC_INT_TYPE* indices, bool reorder_indices, INT_TYPE max_items_per_leaf) noexcept {
     // Clear the tree in advance to save memory.
     myRoot.reset();
 
@@ -208,7 +209,7 @@ void BVH<N>::init(Box<T,NAXES> axes_minmax, const BOX_TYPE* boxes, INT_TYPE nbox
 
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverse(
+inline void BVH<N>::traverse(
     FUNCTORS &functors,
     LOCAL_DATA* data_for_parent) const noexcept
 {
@@ -220,7 +221,7 @@ void BVH<N>::traverse(
 }
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverseHelper(
+inline void BVH<N>::traverseHelper(
     INT_TYPE nodei,
     INT_TYPE parent_nodei,
     FUNCTORS &functors,
@@ -251,7 +252,7 @@ void BVH<N>::traverseHelper(
 
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverseParallel(
+inline void BVH<N>::traverseParallel(
     INT_TYPE parallel_threshold,
     FUNCTORS& functors,
     LOCAL_DATA* data_for_parent) const noexcept
@@ -264,7 +265,7 @@ void BVH<N>::traverseParallel(
 }
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverseParallelHelper(
+inline void BVH<N>::traverseParallelHelper(
     INT_TYPE nodei,
     INT_TYPE parent_nodei,
     INT_TYPE parallel_threshold,
@@ -376,7 +377,7 @@ void BVH<N>::traverseParallelHelper(
 
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverseVector(
+inline void BVH<N>::traverseVector(
     FUNCTORS &functors,
     LOCAL_DATA* data_for_parent) const noexcept
 {
@@ -388,7 +389,7 @@ void BVH<N>::traverseVector(
 }
 template<uint N>
 template<typename LOCAL_DATA,typename FUNCTORS>
-void BVH<N>::traverseVectorHelper(
+inline void BVH<N>::traverseVectorHelper(
     INT_TYPE nodei,
     INT_TYPE parent_nodei,
     FUNCTORS &functors,
@@ -423,13 +424,13 @@ void BVH<N>::traverseVectorHelper(
 
 template<uint N>
 template<typename SRC_INT_TYPE>
-void BVH<N>::createTrivialIndices(SRC_INT_TYPE* indices, const INT_TYPE n) noexcept {
+inline void BVH<N>::createTrivialIndices(SRC_INT_TYPE* indices, const INT_TYPE n) noexcept {
     igl::parallel_for(n, [indices,n](INT_TYPE i) { indices[i] = i; }, 65536);
 }
 
 template<uint N>
 template<typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::computeFullBoundingBox(Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, const INT_TYPE nboxes, SRC_INT_TYPE* indices) noexcept {
+inline void BVH<N>::computeFullBoundingBox(Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, const INT_TYPE nboxes, SRC_INT_TYPE* indices) noexcept {
     if (!nboxes) {
         axes_minmax.initBounds();
         return;
@@ -488,7 +489,7 @@ void BVH<N>::computeFullBoundingBox(Box<T,NAXES>& axes_minmax, const BOX_TYPE* b
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, const INT_TYPE nboxes) noexcept {
+inline void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, const INT_TYPE nboxes) noexcept {
     if (nboxes <= N) {
         // Fits in one node
         for (INT_TYPE i = 0; i < nboxes; ++i) {
@@ -621,7 +622,7 @@ void BVH<N>::initNode(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axe
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::initNodeReorder(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, const INT_TYPE indices_offset, const INT_TYPE max_items_per_leaf) noexcept {
+inline void BVH<N>::initNodeReorder(UT_Array<Node>& nodes, Node &node, const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, const INT_TYPE indices_offset, const INT_TYPE max_items_per_leaf) noexcept {
     if (nboxes <= N) {
         // Fits in one node
         for (INT_TYPE i = 0; i < nboxes; ++i) {
@@ -819,7 +820,7 @@ void BVH<N>::initNodeReorder(UT_Array<Node>& nodes, Node &node, const Box<T,NAXE
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::multiSplit(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, SRC_INT_TYPE* sub_indices[N+1], Box<T,NAXES> sub_boxes[N]) noexcept {
+inline void BVH<N>::multiSplit(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, SRC_INT_TYPE* sub_indices[N+1], Box<T,NAXES> sub_boxes[N]) noexcept {
     sub_indices[0] = indices;
     sub_indices[2] = indices+nboxes;
     split<H>(axes_minmax, boxes, indices, nboxes, sub_indices[1], &sub_boxes[0]);
@@ -920,7 +921,7 @@ void BVH<N>::multiSplit(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, 
 
 template<uint N>
 template<BVH_Heuristic H,typename T,uint NAXES,typename BOX_TYPE,typename SRC_INT_TYPE>
-void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, SRC_INT_TYPE*& split_indices, Box<T,NAXES>* split_boxes) noexcept {
+inline void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_INT_TYPE* indices, INT_TYPE nboxes, SRC_INT_TYPE*& split_indices, Box<T,NAXES>* split_boxes) noexcept {
     if (nboxes == 2) {
         split_boxes[0].initBounds(boxes[indices[0]]);
         split_boxes[1].initBounds(boxes[indices[1]]);
@@ -1373,7 +1374,7 @@ void BVH<N>::split(const Box<T,NAXES>& axes_minmax, const BOX_TYPE* boxes, SRC_I
 
 template<uint N>
 template<uint PARALLEL_THRESHOLD, typename SRC_INT_TYPE>
-void BVH<N>::adjustParallelChildNodes(INT_TYPE nparallel, UT_Array<Node>& nodes, Node& node, UT_Array<Node>* parallel_nodes, SRC_INT_TYPE* sub_indices) noexcept
+inline void BVH<N>::adjustParallelChildNodes(INT_TYPE nparallel, UT_Array<Node>& nodes, Node& node, UT_Array<Node>* parallel_nodes, SRC_INT_TYPE* sub_indices) noexcept
 {
   // Alec: No need to parallelize this...
     //UTparallelFor(UT_BlockedRange<INT_TYPE>(0,nparallel), [&node,&nodes,&parallel_nodes,&sub_indices](const UT_BlockedRange<INT_TYPE>& r) {
@@ -1567,4 +1568,5 @@ void BVH<N>::debugDump() const {
 
 } // UT namespace
 } // End HDK_Sample namespace
+}}
 #endif

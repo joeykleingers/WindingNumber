@@ -29,7 +29,8 @@
 #include "UT_Array.h"
 
 #include <thread> // This is just included for std::thread::hardware_concurrency()
-namespace UT_Thread { int getNumProcessors() {
+namespace igl { namespace FastWindingNumber {
+namespace UT_Thread { inline int getNumProcessors() {
     return std::thread::hardware_concurrency();
 }}
 
@@ -223,4 +224,5 @@ namespace UT_Thread { int getNumProcessors() {
 //void UTserialFor(const Range &range, const Body &body)
 //	{ body(range); }
 //
+}}
 #endif
