@@ -1,5 +1,7 @@
 #pragma once
 #ifndef __SSE__
+#ifndef __VM_SIMDFunc__
+#define __VM_SIMDFunc__
 
 #include "SYS_Types.h"
 
@@ -394,4 +396,5 @@ int _mm_movemask_ps(const v4sf& v) {
 	);
 }
 }}
+#endif
 #endif
