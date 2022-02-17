@@ -375,7 +375,7 @@ static SYS_FORCE_INLINE bool vm_allbits(v4si a) {
 	);
 }
 
-int _mm_movemask_ps(const v4si& v) {
+int SYS_FORCE_INLINE _mm_movemask_ps(const v4si& v) {
 	return (
 		int(v.v[0] < 0) |
 		(int(v.v[1] < 0)<<1) |
@@ -384,7 +384,7 @@ int _mm_movemask_ps(const v4si& v) {
 	);
 }
 
-int _mm_movemask_ps(const v4sf& v) {
+int SYS_FORCE_INLINE _mm_movemask_ps(const v4sf& v) {
 	// Use std::signbit just in case it needs to distinguish between +0 and -0
 	// or between positive and negative NaN values (e.g. these could really
 	// be integers instead of floats).
