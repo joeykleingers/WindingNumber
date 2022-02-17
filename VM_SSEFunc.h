@@ -24,6 +24,7 @@
  */
 
 #pragma once
+#ifdef __SSE__
 
 #ifndef __VM_SSEFunc__
 #define __VM_SSEFunc__
@@ -400,4 +401,5 @@ vm_allbits(const v4si &a)
 #define VM_IFLOAT	_mm_cvtepi32_ps
 }}
 
+#endif
 #endif
